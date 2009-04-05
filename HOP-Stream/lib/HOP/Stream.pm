@@ -1,4 +1,4 @@
-p ackage HOP::Stream;
+package HOP::Stream;
 
 use warnings;
 use strict;
