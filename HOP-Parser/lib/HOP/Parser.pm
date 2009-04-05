@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 use base 'Exporter';
-use HOP::Stream qw/drop tail head/;
+use HOP::Stream qw/drop tail head node is_node/;
 
 our %N;
 
@@ -211,6 +211,7 @@ sub lookfor {
     $wanted = [$wanted] unless ref $wanted;
     my $parser = parser {
         my $input = shift;
+        $input = node(@$input) if ref($input) eq 'ARRAY';
         unless ( defined $input ) {
             die [ 'TOKEN', $input, $wanted ];
         }
@@ -231,7 +232,7 @@ sub lookfor {
         # Otherwise, the AoA stream might just return an aref for
         # the tail instead of an AoA.  This breaks things
         my $tail = tail($input);
-        if ( 'ARRAY' eq ref $tail && 'ARRAY' ne ref $tail->[0] ) {
+        if ( is_node($tail) && !is_node($tail->[0]) ) {
             $tail = [$tail];
         }
         return ( $wanted_value, $tail );
@@ -691,6 +692,11 @@ Morgan Kaufmann Publishers, Copyright 2005 by Elsevier Inc.
 All Software (code listings) presented in the book can be found on the
 companion website for the book (http://perl.plover.com/hop/) and is
 subject to the License agreements below.
+
+=head1 LATEST VERSION
+
+You can download the latest versions of these modules at
+L<http://github.com/Ovid/hop/>.  Feel free to fork and make changes.
 
 =head1 ELSEVIER SOFTWARE LICENSE AGREEMENT
 

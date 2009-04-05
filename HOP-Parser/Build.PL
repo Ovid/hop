@@ -10,7 +10,7 @@ my $builder = Module::Build->new(
         'Sub::Uplevel'    => 0,      # get around CPANPLUS bug
         'Test::Exception' => 0,
         'Test::More'      => 0,
-        'HOP::Stream'     => 0.01,
+        'HOP::Stream'     => 0.03,
     },
     add_to_cleanup     => ['HOP-Parser-*'],
     create_makefile_pl => 'traditional',

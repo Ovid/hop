@@ -1,5 +1,9 @@
 Revision history for HOP-Parser
 
+0.02    2009-04-05
+        Rely on HOP-Steam 0.03.  This fixes (rt 37367), reported by RUDY
+        <rlippan [...] remotelinux.com>.
+
 0.01    Date/time
         First version, released on an unsuspecting world.
 
