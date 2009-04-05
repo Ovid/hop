@@ -10,6 +10,7 @@ our @EXPORT_OK = qw(
   filter
   head
   insert
+  is_node
   iterator_to_stream
   list_to_stream
   append

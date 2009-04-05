@@ -2,7 +2,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 61;
+use Test::More tests => 62;
 #use Test::More 'no_plan';
 
 use lib 'lib/', '../lib/';
@@ -17,6 +17,7 @@ my @exported = qw(
   filter
   head
   insert
+  is_node
   iterator_to_stream
   list_to_stream
   append
