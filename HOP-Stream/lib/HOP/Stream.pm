@@ -1,4 +1,4 @@
-package HOP::Stream;
+p ackage HOP::Stream;
 
 use warnings;
 use strict;
@@ -476,6 +476,11 @@ Morgan Kaufmann Publishers, Copyright 2005 by Elsevier Inc.
 All Software (code listings) presented in the book can be found on the
 companion website for the book (http://perl.plover.com/hop/) and is
 subject to the License agreements below.
+
+=head1 LATEST VERSION
+
+You can download the latest versions of these modules at
+L<http://github.com/Ovid/hop/>.  Feel free to fork and make changes.
 
 =head1 ELSEVIER SOFTWARE LICENSE AGREEMENT
 
