@@ -1,6 +1,6 @@
 ---
 name: HOP-Stream
-version: 0.02
+version: 0.03
 author:
   - 'Curtis "Ovid" Poe <ovid@cpan.org>'
 abstract: '"Higher Order Perl" streams'
@@ -10,8 +10,8 @@ requires:
 provides:
   HOP::Stream:
     file: lib/HOP/Stream.pm
-    version: 0.02
-generated_by: Module::Build version 0.2808
+    version: 0.03
+generated_by: Module::Build version 0.32
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
   version: 1.2
