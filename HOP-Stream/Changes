@@ -1,5 +1,8 @@
 Revision history for HOP-Stream
 
+0.03
+        - Documentation fix (rt 44786).  Thanks to Fany for spotting this.
+
 0.02    2008-06-19
         - Added support for array references (rt 33258).  Thanks to Paolo
           Custodio for the patch.

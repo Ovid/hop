@@ -31,11 +31,11 @@ HOP::Stream - "Higher Order Perl" streams
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -120,8 +120,7 @@ sub node {
 
   my $head = head( $node );
 
-This function removes the head of the stream, modifying it in-place, and
-returns the head.
+This function returns the head of a stream.
 
 =cut
 
