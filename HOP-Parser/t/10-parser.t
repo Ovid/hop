@@ -587,7 +587,7 @@ is_deeply $remainder, [ [ SEP => ',' ] ],
 @tokens = ( node( 'FOO' => 1 ), node( 'FOO' => 2 ), );
 $foo_stream = list_to_stream(@tokens);
 ( $parsed, $remainder ) = run_parser( optional( match('FOO') ), $foo_stream );
-is_deeply $parsed, [1], 'optional() should be able to match an item';
+is_deeply $parsed, 1, 'optional() should be able to match an item';
 is_deeply $remainder, [ [ FOO => 2 ] ], '... but only one of that item';
 
 @tokens = ( node( 'OOF' => 1 ), node( 'FOO' => 1 ), node( 'FOO' => 2 ), );

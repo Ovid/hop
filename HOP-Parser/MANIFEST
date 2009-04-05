@@ -8,4 +8,5 @@ t/00-load.t
 t/10-parser.t
 t/pod-coverage.t
 t/pod.t
+t/regression.t
 Makefile.PL

@@ -43,11 +43,11 @@ HOP::Parser - "Higher Order Perl" Parser
 
 =head1 VERSION
 
-Version 0.02
+Version 0.02_01
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.02_01';
 
 =head1 SYNOPSIS
 
@@ -232,7 +232,7 @@ sub lookfor {
         # Otherwise, the AoA stream might just return an aref for
         # the tail instead of an AoA.  This breaks things
         my $tail = tail($input);
-        if ( is_node($tail) && !is_node($tail->[0]) ) {
+        if ( is_node($tail) and not is_node( head($tail) ) ) {
             $tail = [$tail];
         }
         return ( $wanted_value, $tail );
@@ -553,7 +553,7 @@ This parser matches 0 or 1 of the given parser item.
 sub optional {
     my $parser = shift;
     return alternate (
-        T($parser, sub { [ shift ] }),
+        $parser,
         \&null_list,
     );
 }
