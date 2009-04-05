@@ -1,7 +1,9 @@
 Revision history for HOP-Stream
 
-0.03
-        - Make is_node() exportable.
+0.03    2009-04-05
+        - Make is_node() exportable.  This is part of a fix to resolve a
+          HOP::Parser failure (rt 37367).  Thanks to RUDY <rlippan [...]
+          remotelinux.com> for the fix.
         - Documentation fix (rt 44786).  Thanks to Fany for spotting this.
 
 0.02    2008-06-19
