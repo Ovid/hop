@@ -1,0 +1,18 @@
+---
+name: HOP-Parser
+version: 0.01
+author:
+  - Curtis "Ovid" Poe <ovid@cpan.org>
+abstract: '"Higher Order Perl" Parser'
+license: http://hop.perl.plover.com/Examples/LICENSE.txt
+requires:
+  HOP::Stream: 0.01
+  Sub::Uplevel: 0
+  Test::Exception: 0
+  Test::More: 0
+provides:
+  HOP::Parser:
+    file: lib/HOP/Parser.pm
+    version: 0.01
+generated_by: Module::Build version 0.2702
+MailingList: http://hop.perl.plover.com/~alias/list.cgi/2/

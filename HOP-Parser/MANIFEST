@@ -1,0 +1,11 @@
+Build.PL
+Changes
+MANIFEST
+META.yml # Will be created by "make dist"
+README
+lib/HOP/Parser.pm
+t/00-load.t
+t/10-parser.t
+t/pod-coverage.t
+t/pod.t
+Makefile.PL

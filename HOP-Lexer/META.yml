@@ -1,0 +1,19 @@
+---
+name: HOP-Lexer
+version: 0.032
+author:
+  - 'Curtis "Ovid" Poe <ovid@cpan.org>'
+abstract: '"Higher Order Perl" Lexer'
+license: http://hop.perl.plover.com/Examples/LICENSE.txt
+requires:
+  HOP::Stream: 0.01
+  Test::More: 0
+provides:
+  HOP::Lexer:
+    file: lib/HOP/Lexer.pm
+    version: 0.032
+generated_by: Module::Build version 0.2805
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
+MailingList: http://hop.perl.plover.com/~alias/list.cgi/2/

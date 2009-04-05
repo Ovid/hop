@@ -1,0 +1,21 @@
+Revision history for HOP-Lexer
+
+0.032   2007-03-2007
+        - Forgot to include the tests in the MANIFEST.  Thanks to David
+          Wheeler (theory) for pointing that out.
+        - Fixed confusing typo in Article.pod.  (Numerous people)
+
+0.031   2006-04-05
+        - Renamed "CAVEATS" to "DEBUGGING" and added a note on precedence to
+          that section.
+
+0.03    2006-03-21
+        - Added HOP::Lexer::Article.  Reproduced by permission of O'Reilly.
+          Minor doc updates.
+
+0.02    2006-01-26
+        - Added "string_lexer" syntactic sugar.
+
+0.01    Date/time
+        - First version, released on an unsuspecting world.
+

@@ -1,0 +1,11 @@
+Revision history for HOP-Stream
+
+0.02    2008-06-19
+        - Added support for array references (rt 33258).  Thanks to Paolo
+          Custodio for the patch.
+        - Added 'append' function which allows streams to be appended
+          together.
+
+0.01    Date/time
+        First version, released on an unsuspecting world.
+
