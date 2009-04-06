@@ -29,6 +29,7 @@ our @EXPORT_OK = qw(
   rlist_of
   rlist_values_of
   star
+  plus
   T
   test
 );
@@ -112,6 +113,8 @@ functions could stand to be better named (C<rlist_of>, for example).
 =item * rlist_values_of
 
 =item * star
+
+=item * plus
 
 =item * T
 
@@ -518,11 +521,16 @@ sub null_list {
   my ($parsed, $remainder) = $parser->($stream);
 
 This parser always succeeds and matches zero or more instances of
-C<$another_parser>.  If it matches zero, it returns the same results as
-C<null_list>.  Otherwise, it returns and array ref of the matched values and
-the remainder of the stream.
+C<$another_parser>. It parallels the regular expression C<*> quantifier. If it
+matches zero, it returns the same results as C<null_list>. Otherwise, it
+returns and array ref of the matched values and the remainder of the stream.
 
 =cut
+
+my $star_plus_t = sub {
+    my ( $first, $rest ) = @_;
+    [ $first, @$rest ];
+};
 
 sub star {
     my $p = shift;
@@ -530,12 +538,31 @@ sub star {
     $p_star = alternate(
         T(
             concatenate( $p, parser { $p_star->(@_) } ),
-            sub {
-                my ( $first, $rest ) = @_;
-                [ $first, @$rest ];
-            }
+            $star_plus_t,
         ),
         \&null_list
+    );
+}
+
+##############################################################################
+
+=head2 plus
+
+  my $parser = plus($another_parser);
+  my ($parsed, $remainder) = $parser->($stream);
+
+This parser succeeds when it matches one or more instances of
+C<$another_parser>. It parallels the regular expression C<+> quantifier. If it
+matches one or more, it returns and array ref of the matched values and the
+remainder of the stream.
+
+=cut
+
+sub plus {
+    my $p = shift;
+    T(
+        concatenate( $p, star($p) ),
+        $star_plus_t,
     );
 }
 
@@ -544,9 +571,10 @@ sub star {
 =head2 optional
 
  my $parser = optional($another_parser);
- my ($parser, $remainder) = $parser->(stream); 
+ my ($parser, $remainder) = $parser->(stream);
 
-This parser matches 0 or 1 of the given parser item.
+This parser matches 0 or 1 of the given parser item. It parallels the regular
+expression C<?> quantifier.
 
 =cut
 

@@ -3,7 +3,7 @@ use warnings;
 use strict;
 
 use Test::Exception;
-use Test::More tests => 128;
+use Test::More tests => 138;
 #use Test::More 'no_plan';
 
 use lib 'lib/', '../lib/';
@@ -41,6 +41,7 @@ my @exported = qw(
   rlist_of
   rlist_values_of
   star
+  plus
   T
   test
 );
@@ -359,6 +360,37 @@ ok !defined $remainder, '... and should be able to match an entire stream';
 my $foo_stream = list_to_stream(@tokens);
 ( $parsed, $remainder ) = run_parser( star( match('FOO') ), $foo_stream );
 is_deeply $parsed, [qw/1 2 3 4 5/], 'star() be able to slurp up multiple items';
+is_deeply $remainder, [ [ BAR => 6 ], [ FOO => 7 ] ],
+  '... and return the rest of the stream';
+
+#
+# plus:  generates a "one or more" parser
+#
+
+dies_ok { run_parser( plus( match('Foo') ), $stream ) }
+  'plus() should die when it matches 0 times';
+
+( $parsed, $remainder ) = run_parser( star( match('OP') ), $stream );
+is_deeply $parsed, ['+'],
+  'The star() parser should return the first value if matched';
+is_deeply $remainder, $expected, '... and then the remainder of the stream';
+
+( $parsed, $remainder ) =
+  run_parser( plus( alternate( match('VAR'), match('OP') ) ), $stream );
+is_deeply $parsed, [ '+', 'x' ],
+  'The plus() parser should return all the values matched';
+is_deeply $remainder, [ [ VAL => 3 ], [ VAL => 17 ] ],
+  '... and then the remainder of the stream';
+
+( $parsed, $remainder ) =
+  run_parser( plus( alternate( match('VAL'), match('VAR'), match('OP') ) ),
+    $stream );
+is_deeply $parsed, [ '+', 'x', 3, 17 ],
+  'The plus() parser should return all the values matched';
+ok !defined $remainder, '... and should be able to match an entire stream';
+
+( $parsed, $remainder ) = run_parser( plus( match('FOO') ), $foo_stream );
+is_deeply $parsed, [qw/1 2 3 4 5/], 'plus() be able to slurp up multiple items';
 is_deeply $remainder, [ [ BAR => 6 ], [ FOO => 7 ] ],
   '... and return the rest of the stream';
 
