@@ -1,5 +1,8 @@
 Revision history for HOP-Parser
 
+0.03
+        Added the plus() parser.
+
 0.02_01 2009-04-05    
         Fixed nasty bug whereby optional() would truncate concatenated streams.  
         In unusual cases, this might change the interface.  (rt 35997 - 
