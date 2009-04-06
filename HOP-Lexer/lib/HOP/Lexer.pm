@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 use base 'Exporter';
-our @EXPORT_OK   = qw/ make_lexer make_lexer_stream string_lexer /;
+our @EXPORT_OK   = qw/ make_lexer make_lexer_stream string_lexer file_lexer_stream /;
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 
 use HOP::Stream qw/ node head drop iterator_to_stream /;
@@ -15,11 +15,11 @@ HOP::Lexer - "Higher Order Perl" Lexer
 
 =head1 VERSION
 
-Version 0.032a
+Version 0.032b
 
 =cut
 
-our $VERSION = '0.032a';
+our $VERSION = '0.032b';
 
 =head1 SYNOPSIS
 
@@ -31,6 +31,7 @@ our $VERSION = '0.032a';
       [ 'NUM',   qr/\d+/             ],
       [ 'OP',    qr/[+=]/            ],
       [ 'SPACE', qr/\s+/, sub { () } ],
+      { FILE_POSITION => $file_name },
    );
    
    my $text  = 'x = 3 + 4';
@@ -53,10 +54,16 @@ our $VERSION = '0.032a';
    while ( my $token = drop($lexer_stream) ) {
        push @tokens, $token;
    }
+   
+   my $file_stream = file_lexer_stream($file, @input_tokens);
+   while ( my $token = drop($lexer_stream) ) {
+       push @tokens, $token;
+   }
 
 =head1 EXPORT
 
-Three functions may be exported, C<make_lexer>, C<make_lexer_stream> and C<string_lexer>.
+Four functions may be exported, C<make_lexer>, C<make_lexer_stream>, C<string_lexer>
+and C<file_lexer_stream>.
 
 =head1 FUNCTIONS
 
@@ -67,7 +74,7 @@ Three functions may be exported, C<make_lexer>, C<make_lexer_stream> and C<strin
  my $lexer = make_lexer( $input_iterator, @tokens );  
  my $lexer_stream = make_lexer_stream( $input_iterator, @tokens );  
 
-The C<make_lexer> and C<make_lexer_stream> function expect an input data iterator 
+The C<make_lexer> and C<make_lexer_stream> functions expect an input data iterator 
 as the first argument and a series of tokens as subsequent arguments. 
 They return a stream of lexed tokens: the C<make_lexer> as an iterator, and 
 the C<make_lexer_stream> as a stream (see L<HOP::Stream>). 
@@ -84,9 +91,32 @@ The next output token can be peeked on the stream without consuming it by:
     my $token = $lexer->('peek');
     my $token = head($lexer_stream);
 
-The output tokens are two element arrays:
+The output tokens are two element arrays (but see the option C<FILE_POSITION> below):
 
  [ $label, $matched_text ]
+
+The C<@tokens> can contain a hash reference with options. The following option 
+is available:
+
+=over 4
+
+=item * { FILE_POSITION => $file_name }
+
+If this option is given, the output tokens are changed to four element arrays:
+
+ [ $label, $matched_text, $file_name, $line_nr ]
+
+where $file_name is the name given in the option, and $line_nr is the line in the 
+input where the token starts. The first line is numbered 1, and is incremented 
+for each C<\n> character found in the input. 
+
+This option is usefull in a parser to give meaningfull error messages at the token
+location. The file name is also included to allow the input stream to contain 
+lines from different files, e.g. because of a file include mechanism.
+
+See also the C<file_lexer_stream> function below.
+
+=back
 
 The C<$input_iterator> should be either a subroutine reference that returns 
 the next value merely by calling the subroutine with no arguments, or a
@@ -173,29 +203,16 @@ Note that the order in which the input tokens are passed in might cause input
 to be lexed in different ways, thus the order is significant (C</\w+/> might
 slurp up numbers before C</\b\d+\b/> can read them).
 
-=head2 string_lexer
-
- my $lexer = string_lexer( $string, @tokens );
-
-This function is identical to C<make_lexer>, but takes a string as the first
-argument.  This is merely syntactic sugar for the common case where we have
-our data in a string but don't want to create an iterator.  The following are
-equivalent.
-
- my $lexer = string_lexer( $text, @input_tokens );
-
-Versus:
-
- my @text  = ($text);
- my $iter  = sub { shift @text };
- my $lexer = make_lexer( $iter, @input_tokens );
-
 =cut
 
-sub string_lexer {
-    my $text = shift;
-    my @text = $text;
-    return make_lexer( sub { shift @text }, @_ );
+sub make_lexer {
+	my($input, @tokens) = @_;
+	
+	my $lexer_stream = make_lexer_stream($input, @tokens);
+	return sub {
+		my($peek) = @_;
+		return ($peek||'') eq 'peek' ? head($lexer_stream) : drop($lexer_stream);
+	};
 }
 
 
@@ -205,9 +222,20 @@ sub make_lexer_stream {
 	
 	# variables for closure
 	my $buf = ""; my $ahead = "";
+	my %options;
+	my $line_nr = 1;									# for FILE_POSITION option
 
+	# extract all options in the order found in the list
+	for (@tokens) {
+		ref($_) eq 'HASH' or next;
+		while (my($k, $v) = each %$_) {
+			$options{$k} = $v;
+		}
+	}
+	@tokens = grep { ref($_) eq 'ARRAY' } @tokens;		# extract only token definitions
+	
 	# build function chain to match each token, and regexp to match any token
-	my $match_token_sub = sub { (undef, undef); };		# return (found, token)
+	my $match_token_sub = sub { (undef, undef, ''); };	# return (found, token, matched_text)
 	my $match_any_re;
 	for (reverse @tokens) {
 		my ($label, $regexp, $transform) = @$_;
@@ -217,11 +245,12 @@ sub make_lexer_stream {
 		$match_token_sub = 
 			sub {
 				if ( $buf =~ / \G ( (?> $regexp ) ) $ahead /gcx ) {
-					my $token = $transform->( $label, $1 );
-					return (1, $token);
+					my $matched = $1;
+					my $token = $transform->( $label, $matched );
+					return (1, $token, $matched);
 				}
 				else {
-					return $previous_match_token_sub->();		# chain to previous match
+					return $previous_match_token_sub->();	# chain to previous match
 				}
 			};
 		$match_any_re = $match_any_re ? 
@@ -250,22 +279,24 @@ sub make_lexer_stream {
 						}
 						else {
 							# we have unparsed text here, return the un-parseable prefix
+							my $ret;
 							if ($buf =~ / $match_any_re /x) {
 								# found a next token
 								# special case for /\s*/ that matches at start of string, 
 								# resulting in $` eq '' -> return and remove first char
-								(my $ret, $buf) = $` eq '' ?
+								($ret, $buf) = $` eq '' ?
 													(substr($buf,0,1), substr($buf,1)) :
 													($`, $&.$');
 								
-								return $ret;			# return unparsed text as SCALAR
 							}
 							else {
 								# no next token
-								my $ret = $buf; $buf = '';
-								return $ret;			# did not find next token, 
+								($ret, $buf) = ($buf, '');
+														# did not find next token, 
 														# return whole string
 							}
+							$line_nr += ($ret =~ tr/\n/\n/)	if $options{FILE_POSITION};
+							return $ret;				# return unparsed text as SCALAR
 						}
 					}
 					
@@ -283,8 +314,12 @@ sub make_lexer_stream {
 				}
 
 				# match next token
-				my($found, $token) = $match_token_sub->();
+				my($found, $token, $matched) = $match_token_sub->();
 				if ($found) {
+					if ($options{FILE_POSITION}) {
+						push(@$token, $options{FILE_POSITION}, $line_nr) if $token;
+						$line_nr += ($matched =~ tr/\n/\n/);
+					}
 					return $token if $token;
 					next;								# discard token
 				}
@@ -295,15 +330,50 @@ sub make_lexer_stream {
 		};
 }
 
-sub make_lexer {
-	my($input, @tokens) = @_;
-	
-	my $lexer_stream = make_lexer_stream($input, @tokens);
-	return sub {
-		my($peek) = @_;
-		return ($peek||'') eq 'peek' ? head($lexer_stream) : drop($lexer_stream);
-	};
+
+=head2 file_lexer_stream
+
+   my $file_stream = file_lexer_stream($file, @input_tokens);
+
+The C<file_lexer_stream> function accepts a file name and a list of tokens to parse.
+It returns a stream (see L<HOP::Stream>) of the tokens found in the given file.
+Each token is returned as a four element array (see C<FILE_POSITION> option above):
+
+ [ $label, $matched_text, $file_name, $line_nr ]
+
+=cut
+
+sub file_lexer_stream {
+	my($file, @tokens) = @_;
+	open(my $fh, $file) or die "Open $file: $!\n";
+	return make_lexer_stream(sub {<$fh>}, @tokens, { FILE_POSITION => $file });
 }
+
+=head2 string_lexer
+
+ my $lexer = string_lexer( $string, @tokens );
+
+This function is identical to C<make_lexer>, but takes a string as the first
+argument.  This is merely syntactic sugar for the common case where we have
+our data in a string but don't want to create an iterator.  The following are
+equivalent.
+
+ my $lexer = string_lexer( $text, @input_tokens );
+
+Versus:
+
+ my @text  = ($text);
+ my $iter  = sub { shift @text };
+ my $lexer = make_lexer( $iter, @input_tokens );
+
+=cut
+
+sub string_lexer {
+    my $text = shift;
+    my @text = $text;
+    return make_lexer( sub { shift @text }, @_ );
+}
+
 
 =head1 DEBUGGING
 

@@ -13,7 +13,10 @@ t/13-input_token.t
 t/14-input_stream.t
 t/15-capture_parens.t
 t/16-transform.t
+t/17-file_stream.in
+t/17-file_stream.t
 t/pod-coverage.t
 t/pod.t
+t/rt_id_30385.t
 t/rt_id_44441.t
 Makefile.PL

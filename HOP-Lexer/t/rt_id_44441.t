@@ -2,6 +2,8 @@
 use warnings;
 use strict;
 
+# RT ID #44441 : Nested patterns of same precedence are not lexed correctly
+
 use Test::More tests => 5;
 
 BEGIN {
