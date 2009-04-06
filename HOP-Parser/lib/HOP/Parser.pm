@@ -53,7 +53,7 @@ our $VERSION = '0.02_01';
 =head1 SYNOPSIS
 
   use HOP::Parser qw/:all/;
-  
+
   # assemble a bunch of parsers according to a grammar
 
 =head1 DESCRIPTION
@@ -277,7 +277,7 @@ sub parser (&) { $_[0] }
 =head2 concatenate
 
   my $parser = concatenate(@parsers);
-  ok ($values, $remainder) = $parser->($stream);
+  my ($values, $remainder) = $parser->($stream);
 
 This function takes a list of parsers and returns a new parser. The new parser
 succeeds if all parsers passed to C<concatenate> succeed sequentially.
@@ -796,7 +796,7 @@ identifying the original source of the Software: "from Higher-Order Perl by
 Mark Dominus, published by Morgan Kaufmann Publishers, Copyright 2005 by
 Elsevier Inc".
 
-=item 2 Disclaimer of Warranty. 
+=item 2 Disclaimer of Warranty.
 
 We make no warranties at all. The Software is transferred to you on an "as is"
 basis. You use the Software at your own peril. You assume all risk of loss for
@@ -807,7 +807,7 @@ any patent, copyright, or proprietary right. All other warranties, expressed
 or implied, including, without limitation, any warranty of merchantability or
 fitness for a particular purpose are hereby excluded.
 
-=item 3 Limitation of Liability. 
+=item 3 Limitation of Liability.
 
 We will have no liability for special, incidental, or consequential damages
 even if advised of the possibility of such damages. We will not be liable for
