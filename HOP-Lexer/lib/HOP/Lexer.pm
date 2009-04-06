@@ -4,10 +4,10 @@ use warnings;
 use strict;
 
 use base 'Exporter';
-our @EXPORT_OK   = qw/ make_lexer string_lexer /;
+our @EXPORT_OK   = qw/ make_lexer make_lexer_stream string_lexer /;
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 
-use HOP::Stream 'node';
+use HOP::Stream qw/ node head drop iterator_to_stream /;
 
 =head1 NAME
 
@@ -15,49 +15,84 @@ HOP::Lexer - "Higher Order Perl" Lexer
 
 =head1 VERSION
 
-Version 0.032
+Version 0.032a
 
 =cut
 
-our $VERSION = '0.032';
+our $VERSION = '0.032a';
 
 =head1 SYNOPSIS
 
- use HOP::Lexer 'string_lexer';
-  
- my @input_tokens = (
-     [ 'VAR',   qr/[[:alpha:]]+/    ],
-     [ 'NUM',   qr/\d+/             ],
-     [ 'OP',    qr/[+=]/            ],
-     [ 'SPACE', qr/\s*/, sub { () } ],
- );
-  
- my $text  = 'x = 3 + 4';
- my $lexer = string_lexer( $text, @input_tokens );
-  
- my @tokens;
- while ( my $token = $lexer->() ) {
-     push @tokens, $token;
- }
+   use HOP::Lexer ':all';
+   use HOP::Stream 'drop', 'iterator_to_stream';
+
+   my @input_tokens = (
+      [ 'VAR',   qr/[[:alpha:]]+/    ],
+      [ 'NUM',   qr/\d+/             ],
+      [ 'OP',    qr/[+=]/            ],
+      [ 'SPACE', qr/\s+/, sub { () } ],
+   );
+   
+   my $text  = 'x = 3 + 4';
+   my $lexer = string_lexer( $text, @input_tokens );
+   
+   my @tokens;
+   while ( my $token = $lexer->() ) {
+       push @tokens, $token;
+   }
+   
+   open(my $fh, $file);
+   my $lexer = make_lexer( sub {<$fh>}, @input_tokens );
+   while ( my $token = $lexer->() ) {
+       push @tokens, $token;
+   }
+   
+   open(my $fh, $file);
+   my $input_stream = iterator_to_stream(sub {<$fh>});
+   my $lexer_stream = make_lexer_stream( $input_stream, @input_tokens );
+   while ( my $token = drop($lexer_stream) ) {
+       push @tokens, $token;
+   }
 
 =head1 EXPORT
 
-Two functions may be exported, C<make_lexer> and C<string_lexer>.
+Three functions may be exported, C<make_lexer>, C<make_lexer_stream> and C<string_lexer>.
 
 =head1 FUNCTIONS
 
 =head2 make_lexer
 
- my $lexer = make_lexer( $input_iterator, @tokens );  
+=head2 make_lexer_stream
 
-The C<make_lexer> function expects an input data iterator as the first
-argument and a series of tokens as subsequent arguments. It returns a stream
-of lexed tokens. The output tokens are two element arrays:
+ my $lexer = make_lexer( $input_iterator, @tokens );  
+ my $lexer_stream = make_lexer_stream( $input_iterator, @tokens );  
+
+The C<make_lexer> and C<make_lexer_stream> function expect an input data iterator 
+as the first argument and a series of tokens as subsequent arguments. 
+They return a stream of lexed tokens: the C<make_lexer> as an iterator, and 
+the C<make_lexer_stream> as a stream (see L<HOP::Stream>). 
+
+The output tokens are retrieved with:
+
+    use HOP::Stream 'drop';
+    my $token = $lexer->();
+    my $token = drop($lexer_stream);
+
+The next output token can be peeked on the stream without consuming it by:
+
+    use HOP::Stream 'head';
+    my $token = $lexer->('peek');
+    my $token = head($lexer_stream);
+
+The output tokens are two element arrays:
 
  [ $label, $matched_text ]
 
-The iterator should be a subroutine reference that returns the next value
-merely by calling the subroutine with no arguments.  If you have a single
+The C<$input_iterator> should be either a subroutine reference that returns 
+the next value merely by calling the subroutine with no arguments, or a
+stream of the next values (see L<HOP::Stream>).  
+
+If you have a single
 block of text in a scalar that you want lexed, see the C<string_lexer>
 function.
 
@@ -85,7 +120,7 @@ an empty list if the token is to be discarded. For example, to discard
 whitespace (the label is actually irrelevant, but it helps to document the
 code):
 
- [ 'WHITESPACE', /\s+/, sub {()} ]
+ [ 'WHITESPACE', qr/\s+/, sub {()} ]
 
 The two arguments supplied to the transformation subroutine are the label and
 value. Thus, if we wish to force all non-negative integers to have a unary
@@ -122,7 +157,7 @@ One way to do this would be with the following code:
       [ 'VAR',   qr/[[:alpha:]]+/    ],
       [ 'NUM',   qr/\d+/             ],
       [ 'OP',    qr/[+=]/            ],
-      [ 'SPACE', qr/\s*/, sub { () } ],
+      [ 'SPACE', qr/\s+/, sub { () } ],
   );
   
   my $lexer = make_lexer( $iter, @input_tokens );
@@ -154,7 +189,7 @@ Versus:
  my @text  = ($text);
  my $iter  = sub { shift @text };
  my $lexer = make_lexer( $iter, @input_tokens );
- 
+
 =cut
 
 sub string_lexer {
@@ -163,51 +198,111 @@ sub string_lexer {
     return make_lexer( sub { shift @text }, @_ );
 }
 
-sub make_lexer {
-    my $lexer = shift;
-    while (@_) {
-        my $args = shift;
-        $lexer = _tokens( $lexer, @$args );
-    }
-    return $lexer;
+
+sub make_lexer_stream {
+	my($input, @tokens) = @_;
+	$input = iterator_to_stream($input) if ref($input) eq 'CODE';	# convert to stream
+	
+	# variables for closure
+	my $buf = ""; my $ahead = "";
+
+	# build function chain to match each token, and regexp to match any token
+	my $match_token_sub = sub { (undef, undef); };		# return (found, token)
+	my $match_any_re;
+	for (reverse @tokens) {
+		my ($label, $regexp, $transform) = @$_;
+		$transform ||= sub { [ $_[0] => $_[1] ] };
+		
+		my $previous_match_token_sub = $match_token_sub;
+		$match_token_sub = 
+			sub {
+				if ( $buf =~ / \G ( (?> $regexp ) ) $ahead /gcx ) {
+					my $token = $transform->( $label, $1 );
+					return (1, $token);
+				}
+				else {
+					return $previous_match_token_sub->();		# chain to previous match
+				}
+			};
+		$match_any_re = $match_any_re ? 
+							qr/(?> $regexp ) | $match_any_re /x : 
+							qr/(?> $regexp )                 /x;
+	}
+
+	# return stream
+	return iterator_to_stream 
+		sub {
+			my $no_match;
+			for(;;) {
+				# fill input buffer if needed
+				while ($no_match || $buf =~ / \G \z /gcx) {
+					# no match in previous loop or all buffer consumed
+					
+					# discard text already parsed
+					pos($buf) and $buf = substr($buf, pos($buf));
+
+					# get next chunk, check for end of input
+					my $head = head($input);			
+					if ( !defined($head) ||	ref($head) ) {
+						# end of input or next is a token
+						if ($buf eq '') {				# all string consumed
+							return drop($input);		# return undef or token at head
+						}
+						else {
+							# we have unparsed text here, return the un-parseable prefix
+							if ($buf =~ / $match_any_re /x) {
+								# found a next token
+								# special case for /\s*/ that matches at start of string, 
+								# resulting in $` eq '' -> return and remove first char
+								(my $ret, $buf) = $` eq '' ?
+													(substr($buf,0,1), substr($buf,1)) :
+													($`, $&.$');
+								
+								return $ret;			# return unparsed text as SCALAR
+							}
+							else {
+								# no next token
+								my $ret = $buf; $buf = '';
+								return $ret;			# did not find next token, 
+														# return whole string
+							}
+						}
+					}
+					
+					# next chunk is text, append to scan buffer
+					$buf .= drop($input);
+					
+					# return a token only if followed by something else, 
+					# just in case one token is split across several chunks of input
+					$head = head($input);
+					$ahead = defined($head) && !ref($head) ?
+								qr/ (?= .|\s ) /x :		# any char, if input not empty
+								qr//;					# empty regexp at end of input
+					
+					$no_match = 0;
+				}
+
+				# match next token
+				my($found, $token) = $match_token_sub->();
+				if ($found) {
+					return $token if $token;
+					next;								# discard token
+				}
+				else {
+					$no_match++;
+				}
+			}
+		};
 }
 
-sub _tokens {
-    my ( $input, $label, $pattern, $maketoken ) = @_;
-    $maketoken ||= sub { [ $_[0] => $_[1] ] };
-    my @tokens;
-    my $buf = "";    # set to undef when input is exhausted
-    my $split = sub { split /($pattern)/ => $_[0] };
-
-    return sub {
-        while ( 0 == @tokens && defined $buf ) {
-            my $i = $input->();
-            if ( ref $i ) {    # input is a token
-                my ( $sep, $tok ) = $split->($buf);
-                $tok = $maketoken->( $label, $tok ) if defined $tok;
-                push @tokens => grep defined && $_ ne "" => $sep, $tok, $i;
-                $buf = "";
-                last;
-            }
-            $buf .= $i if defined $i;    # append new input to buffer
-            my @newtoks = $split->($buf);
-            while ( @newtoks > 2 || @newtoks && !defined $i ) {
-
-                # buffer contains complete separator plus combined token
-                # OR we've reached the end of input
-                push @tokens => shift @newtoks;
-                push @tokens => $maketoken->( $label, shift @newtoks )
-                  if @newtoks;
-            }
-
-            # reassemble remaining contents of buffer
-            $buf = join "" => @newtoks;
-            undef $buf unless defined $i;
-            @tokens = grep $_ ne "" => @tokens;
-        }
-        $_[0] = '' unless defined $_[0];
-        return 'peek' eq $_[0] ? $tokens[0] : shift @tokens;
-    };
+sub make_lexer {
+	my($input, @tokens) = @_;
+	
+	my $lexer_stream = make_lexer_stream($input, @tokens);
+	return sub {
+		my($peek) = @_;
+		return ($peek||'') eq 'peek' ? head($lexer_stream) : drop($lexer_stream);
+	};
 }
 
 =head1 DEBUGGING
@@ -221,13 +316,6 @@ while lexing data.
 
 The tokens returned by the lexer are array references.  If any data cannot be
 lexed, it will be returned as a string, unchanged.
-
-=item * Capturing parens
-
-Internally, L<Hop::Lexer> uses capturing parentheses to extract the data from
-the provided regular expressions.  If you need to group data in regular
-expressions, use the non-capturing parentheses C<(?:...)>.  Otherwise, your
-code will break.
 
 =item * Precedence
 

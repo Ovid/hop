@@ -7,6 +7,13 @@ lib/HOP/Lexer.pm
 lib/HOP/Lexer/Article.pod
 t/00-load.t
 t/10-lexer.t
+t/11-cont_token.t
+t/12-unparsed.t
+t/13-input_token.t
+t/14-input_stream.t
+t/15-capture_parens.t
+t/16-transform.t
 t/pod-coverage.t
 t/pod.t
+t/rt_id_44441.t
 Makefile.PL
