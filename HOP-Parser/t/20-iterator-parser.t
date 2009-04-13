@@ -3,8 +3,8 @@ use warnings;
 use strict;
 
 use Test::Exception;
-#use Test::More tests => 160;
-use Test::More 'no_plan';
+use Test::More tests => 160;
+#use Test::More 'no_plan';
 
 use lib 'lib/', '../lib/';
 
