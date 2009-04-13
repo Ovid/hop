@@ -3,7 +3,7 @@ use warnings;
 use strict;
 
 use Test::Exception;
-use Test::More tests => 138;
+use Test::More tests => 160;
 #use Test::More 'no_plan';
 
 use lib 'lib/', '../lib/';
@@ -32,6 +32,8 @@ my @exported = qw(
   list_of
   list_values_of
   lookfor
+  lookahead
+  neg_lookahead
   match
   nothing
   null_list
@@ -628,3 +630,70 @@ $foo_stream = list_to_stream(@tokens);
 is_deeply $parsed, [], 'optional() should mean the item is not required';
 is_deeply $remainder, $foo_stream,
   '... and we should return the stream unchanged';
+
+#
+# lookahead: Pass lookfor() args.
+#
+ok $parser = lookahead('OP'), 'lookahead(label) should return a parser';
+
+dies_ok { $parser->( [ [ 'VAL' => 3 ] ] ) }
+  '... and the parser will fail if the next token does not match';
+
+@tokens = (
+    node( OP  => '+' ),
+    node( VAR => 'x' ),
+);
+$stream = list_to_stream(@tokens);
+( $parsed, $remainder ) = $parser->($stream);
+is undef, $parsed, 'on match, lookahead() returns "undef" for what was parsed';
+is $remainder, $stream, 'The remainder should be the original stream';
+$expected = [ [ OP => '+' ], [ VAR => 'x' ] ];
+is_deeply $remainder, $expected, '... and then the rest of the stream';
+
+#
+# lookahead: Pass a parser.
+#
+
+ok $parser = lookahead( match 'OP' ),
+    'lookahead(parser) should return a parser';
+
+dies_ok { $parser->( [ [ 'VAL' => 3 ] ] ) }
+  '... and the parser will fail if the next token does not match';
+
+( $parsed, $remainder ) = $parser->($stream);
+is undef, $parsed, 'on match, lookahead() returns "undef" for what was parsed';
+is $remainder, $stream, 'The remainder should be the original stream';
+$expected = [ [ OP => '+' ], [ VAR => 'x' ] ];
+is_deeply $remainder, $expected, '... and then the rest of the stream';
+
+#
+# neg_lookahead: Pass lookfor() args.
+#
+
+ok $parser = neg_lookahead('VAL'),
+    'neg_lookahead(label) should return a parser';
+
+dies_ok { $parser->( [ [ 'VAL' => 3 ] ] ) }
+  '... and the parser will fail if the next token does match';
+
+( $parsed, $remainder ) = $parser->($stream);
+is undef, $parsed, 'on no match, neg_lookahead() returns "undef" for what was parsed';
+is $remainder, $stream, 'The remainder should be the original stream';
+$expected = [ [ OP => '+' ], [ VAR => 'x' ] ];
+is_deeply $remainder, $expected, '... and then the rest of the stream';
+
+#
+# neg_lookahead: Pass a parser.
+#
+
+ok $parser = neg_lookahead( match 'VAL'),
+    'neg_lookahead(parser) should return a parser';
+
+dies_ok { $parser->( [ [ 'VAL' => 3 ] ] ) }
+  '... and the parser will fail if the next token does match';
+
+( $parsed, $remainder ) = $parser->($stream);
+is undef, $parsed, 'on no match, neg_lookahead() returns "undef" for what was parsed';
+is $remainder, $stream, 'The remainder should be the original stream';
+$expected = [ [ OP => '+' ], [ VAR => 'x' ] ];
+is_deeply $remainder, $expected, '... and then the rest of the stream';

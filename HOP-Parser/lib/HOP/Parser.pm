@@ -20,6 +20,8 @@ our @EXPORT_OK = qw(
   list_of
   list_values_of
   lookfor
+  lookahead
+  neg_lookahead
   match
   nothing
   null_list
@@ -97,6 +99,10 @@ functions could stand to be better named (C<rlist_of>, for example).
 =item * lookfor
 
 =item * match
+
+=item * lookahead
+
+=item * neg_lookahead
 
 =item * nothing
 
@@ -271,6 +277,55 @@ block as a subroutine (i.e., omit the "sub" keyword).
 =cut
 
 sub parser (&) { $_[0] }
+
+##############################################################################
+
+=head2 lookahead
+
+  my $parser = lookahead( $label );
+  $parser = lookahead( $parser );
+
+This function takes a parser argument or list of arguments supported by
+C<lookfor()> and returns a parser that will return true if the parser matches,
+but does not actually change the stream. This is so that you can write parsers
+that match something and then look ahead to see if they match the next thing,
+without actualy consuming that next thing. This is akin to a zero width
+positive look-ahead in a regular expression.
+
+=cut
+
+sub lookahead {
+    my $p = ref $_[0] eq 'CODE' ? shift : lookfor @_;
+    parser {
+        my $input = shift or return;
+        $p->($input);
+        return (undef, $input);
+    },
+}
+
+##############################################################################
+
+=head2 neg_lookahead
+
+  my $parser = neg_lookahead( $label );
+  $parser = neg_lookahead( $parser );
+
+This function returns a parser that returns true if it looks ahead and does
+not find a match for the specified parser. That is, it's akin to a zero width
+negative look-ahead in a regular expression. The supported arguments are the
+same as for C<lookahead()>.
+
+=cut
+
+sub neg_lookahead {
+    my $p = ref $_[0] eq 'CODE' ? shift : lookfor @_;
+    parser {
+        my $input = shift or return;
+        my @ret = eval { $p->($input) };
+        die [ 'TOKEN', $input, $p ] if @ret;
+        return (undef, $input);
+    },
+}
 
 ##############################################################################
 
