@@ -212,6 +212,8 @@ used instead.
 
 =cut
 
+my $is_node = sub { is_node($_[0]) || ref $_[0] eq 'ARRAY' };
+
 sub lookfor {
     my $wanted = shift;
     my $value  = shift || sub { $_[0][1] };
@@ -241,9 +243,8 @@ sub lookfor {
         # Otherwise, the AoA stream might just return an aref for
         # the tail instead of an AoA.  This breaks things
         my $tail = tail($input);
-        if ( is_node($tail) and not is_node( head($tail) ) ) {
-            $tail = [$tail];
-        }
+        $tail = [$tail]
+            if $is_node->($tail) and not $is_node->($tail->[0]);
         return ( $wanted_value, $tail );
     };
     $N{$parser} = "[@$wanted]";
@@ -420,15 +421,7 @@ sub list_of {
 
     return T(
         concatenate( $element, star( concatenate( $separator, $element ) ) ),
-        sub {
-            my @matches = shift;
-            if ( my $tail = shift ) {
-                foreach my $match (@$tail) {
-                    push @matches, @$match;
-                }
-            }
-            return \@matches;
-        }
+        sub {[ $_[0], $_[1] ? map { @$_ } @{ $_[1] } : () ] },
     );
 }
 

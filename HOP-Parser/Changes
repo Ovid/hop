@@ -2,6 +2,9 @@ Revision history for HOP-Parser
 
 0.03
       * Added the plus() parser.
+      * Addd the lookahead() and neg_lookahead() parsers.
+      * Fixed a backward compatibility issue introduced in 0.02 where iterator
+        streams were no longer properly handled.
 
 0.02_01 2009-04-05    
       * Fixed nasty bug whereby optional() would truncate concatenated streams.  
