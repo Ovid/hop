@@ -6,6 +6,9 @@ README
 lib/HOP/Parser.pm
 t/00-load.t
 t/10-parser.t
+t/20-iterator-parser.t
+t/30-evaluate.t
+t/30-evaluate/MJD.pm
 t/pod-coverage.t
 t/pod.t
 t/regression.t
